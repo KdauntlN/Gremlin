@@ -13,13 +13,14 @@ It supports case-sensitive and case-insensitive search with an optional flag to 
 ## Usage
 Basic usage syntax:  
 ```sh
-minigrep [OPTIONS] <QUERY> <FILE_PATH>
+minigrep <QUERY> <FILE_PATH> [OPTIONS]
 ```
 
 - `QUERY`: The string to search for  
 - `FILE_PATH`: Path to the file to search in  
 - `OPTIONS`:  
   - `-i`, `--ignore-case` : Perform case-insensitive search
+  - `-c`, `--count` : Displays how many lines contain the expression
 
 Example:  
 ```sh
