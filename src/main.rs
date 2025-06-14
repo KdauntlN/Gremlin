@@ -5,9 +5,10 @@ use clap::Parser;
 fn main() {
     let cli = Cli::parse();
 
+    // This is a stupid way to handle CLI parsing but it's so much easier than doing it manually
     match &cli.command {
         Commands::Grep { query, file_path, ignore_case, count } => {
-            let config = Config::build(query, file_path, ignore_case, count).unwrap_or_else(|err| {
+            let config = Config::build(query, file_path, ignore_case, count).unwrap_or_else(|err| { // I hate closures
                 eprintln!("Problem parsing arguments: {err}");
                 process::exit(1);
             });
