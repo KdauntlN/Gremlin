@@ -1,5 +1,5 @@
 use std::process;
-use minigrep::{Config, Cli, Commands};
+use minigrep::{Cli, Commands, FindConfig, GrepConfig};
 use clap::Parser;
 
 fn main() {
@@ -8,15 +8,16 @@ fn main() {
     // This is a stupid way to handle CLI parsing but it's so much easier than doing it manually
     match &cli.command {
         Commands::Grep { query, file_path, ignore_case, count } => {
-            let config = Config::build(query, file_path, ignore_case, count).unwrap_or_else(|err| { // I hate closures
-                eprintln!("Problem parsing arguments: {err}");
-                process::exit(1);
-            });
+            let config = GrepConfig::new(query, file_path, ignore_case, count);
 
-            if let Err(e) = minigrep::run(config) {
+            if let Err(e) = minigrep::run_grep(config) {
                 eprintln!("Application error: {e}");
                 process::exit(1);
             }
+        }
+
+        Commands::Find { target, root } => {
+            let config = FindConfig::new(target, root);
         }
     }
 }
