@@ -1,18 +1,26 @@
 use std::{error::Error, fs};
-use clap::Parser;
+use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about)]
-pub struct Args {
-    query: String,
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Commands,
+}
 
-    file_path: String,
+#[derive(Subcommand)]
+pub enum Commands {
+    Grep {
+        query: String,
 
-    #[arg(long, short, help = "Ignore case in search")]
-    ignore_case: bool,
+        file_path: String,
 
-    #[arg(long, short, help = "Display how many lines contain the query")]
-    count: bool,
+        #[arg(long, short, help = "Ignore case in search")]
+        ignore_case: bool,
+
+        #[arg(long, short, help = "Display how many lines contain the query")]
+        count: bool,
+    }
 }
 
 pub struct Config {
@@ -23,13 +31,13 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(args: Args) -> Result<Config, &'static str> {
+    pub fn build(query: &String, file_path: &String, ignore_case: &bool, count: &bool) -> Result<Config, &'static str> {
 
-        let query = args.query;
-        let file_path = args.file_path;
+        let query = query.clone();
+        let file_path = file_path.clone();
 
-        let ignore_case = args.ignore_case;
-        let count = args.count;
+        let ignore_case = ignore_case.clone();
+        let count = count.clone();
 
         Ok(Config { query, file_path, ignore_case, count })
     }

@@ -1,18 +1,21 @@
 use std::process;
-use minigrep::Config;
-use minigrep::Args;
+use minigrep::{Config, Cli, Commands};
 use clap::Parser;
 
 fn main() {
-    let args = Args::parse();
+    let cli = Cli::parse();
 
-    let config = Config::build(args).unwrap_or_else(|err| {
-        eprintln!("Problem parsing arguments: {err}");
-        process::exit(1);
-    });
+    match &cli.command {
+        Commands::Grep { query, file_path, ignore_case, count } => {
+            let config = Config::build(query, file_path, ignore_case, count).unwrap_or_else(|err| {
+                eprintln!("Problem parsing arguments: {err}");
+                process::exit(1);
+            });
 
-    if let Err(e) = minigrep::run(config) {
-        eprintln!("Application error: {e}");
-        process::exit(1);
+            if let Err(e) = minigrep::run(config) {
+                eprintln!("Application error: {e}");
+                process::exit(1);
+            }
+        }
     }
 }
