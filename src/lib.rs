@@ -1,4 +1,4 @@
-use std::{error::Error, fs};
+use std::{error::Error, fs::{self, metadata}, path::PathBuf};
 use clap::{Parser, Subcommand};
 
 // I love clap
@@ -9,7 +9,6 @@ pub struct Cli {
     pub command: Commands,
 }
 
-// WHY IS CLAP SO ANNOYING
 #[derive(Subcommand)]
 pub enum Commands {
     Grep {
@@ -22,39 +21,111 @@ pub enum Commands {
 
         #[arg(long, short, help = "Display how many lines contain the query")]
         count: bool,
+    },
+
+    Find {
+        target: String,
+
+        #[clap(default_value = "C:\\")]
+        root: String
     }
 }
 
 // Information from using the CLI because apparently that's idiomatic for some reason
-pub struct Config {
+pub struct GrepConfig {
     pub query: String,
     pub file_path: String,
     pub ignore_case: bool,
     pub count: bool,
 }
 
-impl Config {
+impl GrepConfig {
     // I hate this function signature but I hate multiline function signatures more
-    pub fn build(query: &String, file_path: &String, ignore_case: &bool, count: &bool) -> Result<Config, &'static str> {
-
+    pub fn new(query: &String, file_path: &String, ignore_case: &bool, count: &bool) -> GrepConfig {
         let query = query.clone();
         let file_path = file_path.clone();
-
         let ignore_case = ignore_case.clone();
         let count = count.clone();
 
-        Ok(Config { query, file_path, ignore_case, count })
+        GrepConfig { query, file_path, ignore_case, count }
     }
 }
 
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+pub struct FindConfig {
+    pub target: String,
+    pub root: PathBuf,
+}
+
+impl FindConfig {
+    pub fn build(target: &str, root: &str) -> Result<FindConfig, Box<dyn Error>> {
+        let target = String::from(target);
+
+        let root = std::path::PathBuf::from(root);
+
+        let md = fs::metadata(&root)?;
+
+        if !md.is_dir() {
+            if md.is_file() {
+                return Err("expected directory to begin search but found file".into())
+            } else {
+                return Err("expected directory to begin search but found unsupported file".into())
+            }
+        }
+        
+        Ok(FindConfig { target, root })
+    }
+
+    pub fn search(&self) -> Vec<PathBuf> {
+        let mut results: Vec<PathBuf> = Vec::new();
+        self.search_recursive(&self.target, &self.root, &mut results);
+        results
+    }
+
+    pub fn search_recursive(&self, target: &str, root: &PathBuf, results: &mut Vec<PathBuf>) {
+        let entries = match fs::read_dir(&root) {
+            Ok(entries) => entries,
+            Err(_) => return,
+        };
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => continue,
+            };
+
+            let md = match metadata(entry.path()) {
+                Ok(md) => md,
+                Err(_) => continue,
+            };
+
+            if md.is_dir() {
+                if let Ok(ft) = entry.file_type() {
+                    if ft.is_symlink() {
+                        continue;
+                    }
+                }
+                self.search_recursive(target, &entry.path(), results);
+            } else {
+                if entry.file_name().to_string_lossy().contains(target) {
+                    let ok_path = match entry.path().canonicalize() {
+                        Ok(path) => path,
+                        Err(_) => break
+                    };
+                    results.push(ok_path);
+                }
+            }
+        }
+    }
+}
+
+pub fn run_grep(config: GrepConfig) -> Result<(), Box<dyn Error>> {
     // I love error propogation why can't C or Python do anything like that
     let contents = fs::read_to_string(config.file_path)?;
 
     let results = if config.ignore_case {
-        search_case_insensitive(&config.query, &contents)
+        search_expr_case_insensitive(&config.query, &contents)
     } else {
-        search(&config.query, &contents)
+        search_expr(&config.query, &contents)
     };
 
     if config.count {
@@ -74,7 +145,7 @@ fn print_lines(results: Vec<(usize, &str)>) {
     }
 
     for (i, line) in results {
-        // ":03" just means print this number with 3 (4 becomes 004, 79 becomes 079, etc.)
+        // ":03" just means print this number with 3 digits by adding leading zeroes (4 becomes 004, 79 becomes 079, etc.)
         println!("{:03}.  {}", i + 1, line);
     }
 }
@@ -89,7 +160,7 @@ fn print_count(results: Vec<(usize, &str)>) {
 }
 
 // Lifetimes are stupid
-pub fn search<'a>(query: &str, contents: &'a str) -> Vec<(usize, &'a str)> {
+pub fn search_expr<'a>(query: &str, contents: &'a str) -> Vec<(usize, &'a str)> {
     let mut results = Vec::new();
     
     for (i, line) in contents.lines().enumerate() {
@@ -102,8 +173,7 @@ pub fn search<'a>(query: &str, contents: &'a str) -> Vec<(usize, &'a str)> {
 }
 
 // Lifetimes are still stupid
-// I SHOULDN'T EVEN NEED THEM HERE BUT IT DOESN'T WORK WITHOUT THEM
-pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<(usize, &'a str)> {
+pub fn search_expr_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<(usize, &'a str)> {
     let query = query.to_lowercase();
     let mut results = Vec::new();
 
@@ -115,6 +185,16 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<(usize
     }
 
     results
+}
+
+pub fn run_search(config: FindConfig) {
+    let results = config.search();
+    for path in results {
+        if let Some(str) = path.to_str() {
+            println!("{str}");
+        }
+        
+    }
 }
 
 #[cfg(test)]
