@@ -1,4 +1,4 @@
-use std::{error::Error, fs};
+use std::{error::Error, fs, path::PathBuf};
 use clap::{Parser, Subcommand};
 
 // I love clap
@@ -54,15 +54,46 @@ impl GrepConfig {
 
 pub struct FindConfig {
     pub target: String,
-    pub root: String,
+    pub root: PathBuf,
 }
 
 impl FindConfig {
-    pub fn new(target: &String, root: &String) -> FindConfig {
-        let target = target.clone();
-        let root = root.clone();
+    pub fn build(target: &str, root: &str) -> Result<FindConfig, Box<dyn Error>> {
+        let target = String::from(target);
 
-        FindConfig { target, root }
+        let root = std::path::PathBuf::from(root);
+
+        let md = fs::metadata(&root)?;
+
+        if !md.is_dir() {
+            if md.is_file() {
+                return Err("expected directory to begin search but found file".into())
+            } else {
+                return Err("expected directory to begin search but found unsupported file".into())
+            }
+        }
+        
+        Ok(FindConfig { target, root })
+    }
+
+    pub fn search(&self) -> Vec<PathBuf> {
+        let mut results: Vec<PathBuf> = Vec::new();
+        self.search_recursive(&self.target, &self.root, &mut results);
+        results
+    }
+
+    pub fn search_recursive(&self, target: &str, root: &PathBuf, results: &mut Vec<PathBuf>) {
+        let entries = match fs::read_dir(&root) {
+            Ok(entries) => entries,
+            Err(_) => return,
+        };
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(entry) => entry,
+                Err(_) => continue,
+            };
+        }
     }
 }
 
@@ -133,12 +164,6 @@ pub fn search_expr_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<(
     }
 
     results
-}
-
-// I probably don't need to box these errors
-pub fn run_find(config: FindConfig) -> Result<Vec<String>, Box<dyn Error>> {
-
-    Ok(vec![String::new()])
 }
 
 #[cfg(test)]

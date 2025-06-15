@@ -17,7 +17,7 @@ fn main() {
         }
 
         Commands::Find { target, root } => {
-            let config = FindConfig::new(target, root);
+            let config = FindConfig::build(target, root);
         }
     }
 }
