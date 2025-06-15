@@ -99,6 +99,11 @@ impl FindConfig {
             };
 
             if md.is_dir() {
+                if let Ok(ft) = entry.file_type() {
+                    if ft.is_symlink() {
+                        continue;
+                    }
+                }
                 self.search_recursive(target, &entry.path(), results);
             } else {
                 if entry.file_name().to_string_lossy().contains(target) {
