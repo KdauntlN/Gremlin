@@ -1,16 +1,17 @@
 use std::process;
-use minigrep::{Cli, Commands, FindConfig, GrepConfig};
+use gremlin::cli::{Cli, Commands};
+use gremlin::commands::find::FindConfig;
+use gremlin::commands::grep::GrepConfig;
 use clap::Parser;
 
 fn main() {
     let cli = Cli::parse();
 
-    // This is a stupid way to handle CLI parsing but it's so much easier than doing it manually
     match &cli.command {
         Commands::Grep { query, file_path, ignore_case, count } => {
             let config = GrepConfig::new(query, file_path, ignore_case, count);
 
-            if let Err(e) = minigrep::run_grep(config) {
+            if let Err(e) = config.run() {
                 eprintln!("Application error: {e}");
                 process::exit(1);
             }
@@ -22,7 +23,7 @@ fn main() {
                 process::exit(1);
             });
 
-            minigrep::run_search(config);
+            config.run_search();
         }
     }
 }
