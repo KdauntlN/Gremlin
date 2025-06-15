@@ -17,7 +17,12 @@ fn main() {
         }
 
         Commands::Find { target, root } => {
-            let config = FindConfig::build(target, root);
+            let config = FindConfig::build(target, root).unwrap_or_else(|err| {
+                println!("Application error: {err}");
+                process::exit(1);
+            });
+
+            minigrep::run_search(config);
         }
     }
 }

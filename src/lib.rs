@@ -1,4 +1,4 @@
-use std::{error::Error, fs, path::PathBuf};
+use std::{error::Error, fs::{self, metadata}, path::PathBuf};
 use clap::{Parser, Subcommand};
 
 // I love clap
@@ -92,6 +92,23 @@ impl FindConfig {
                 Ok(entry) => entry,
                 Err(_) => continue,
             };
+
+            let md = match metadata(entry.path()) {
+                Ok(md) => md,
+                Err(_) => continue,
+            };
+
+            if md.is_dir() {
+                self.search_recursive(target, &entry.path(), results);
+            } else {
+                if entry.file_name().to_string_lossy().contains(target) {
+                    let ok_path = match entry.path().canonicalize() {
+                        Ok(path) => path,
+                        Err(_) => break
+                    };
+                    results.push(ok_path);
+                }
+            }
         }
     }
 }
@@ -163,6 +180,16 @@ pub fn search_expr_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<(
     }
 
     results
+}
+
+pub fn run_search(config: FindConfig) {
+    let results = config.search();
+    for path in results {
+        if let Some(str) = path.to_str() {
+            println!("{str}");
+        }
+        
+    }
 }
 
 #[cfg(test)]
