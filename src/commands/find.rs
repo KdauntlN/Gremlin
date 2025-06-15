@@ -34,7 +34,7 @@ impl FindConfig {
         if let Some(str) = path.to_str() {
             println!("{str}");
         }
-        
+
     }
 }
 }
@@ -77,7 +77,7 @@ pub fn search_recursive(target: &str, root: &PathBuf, results: &mut Vec<PathBuf>
                     Ok(path) => path,
                     Err(_) => break
                 };
-                
+
                 results.push(ok_path);
             }
         }
