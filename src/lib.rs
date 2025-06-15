@@ -9,7 +9,6 @@ pub struct Cli {
     pub command: Commands,
 }
 
-// WHY IS CLAP SO ANNOYING
 #[derive(Subcommand)]
 pub enum Commands {
     Grep {
